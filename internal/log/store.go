@@ -14,6 +14,10 @@ var (
 const (
 	// defines the number of bytes used to store the record's length
 	// http://golang.org/ref/spec#Size_and_alignment_guarantees
+	//
+	// Entry storage in file:
+	// [record length - 8 bytes][     record      ]
+	// [record length - 8 bytes][     record      ]
 	recordLenWidth = 8
 )
 

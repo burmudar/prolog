@@ -82,6 +82,7 @@ func (s *segment) Append(record *api.Record) (offset uint64, err error) {
 
 func (s *segment) Read(off uint64) (*api.Record, error) {
 	// We ask the index - For where art thou position in store for this offset ?
+	// off - s.baseOffset = relative offset
 	_, pos, err := s.index.Read(int64(off - s.baseOffset))
 	if err != nil {
 		return nil, err
@@ -94,7 +95,6 @@ func (s *segment) Read(off uint64) (*api.Record, error) {
 	var ret api.Record
 	err = proto.Unmarshal(p, &ret)
 	return &ret, nil
-
 }
 
 func (s *segment) IsMaxed() bool {

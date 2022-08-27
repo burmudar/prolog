@@ -74,6 +74,8 @@ func (s *store) Read(pos uint64) ([]byte, error) {
 		return nil, err
 	}
 
+	// size is the byte array that will keep the size encoded in binary
+	// recordLenWidth = the length of the binary array encoded size
 	size := make([]byte, recordLenWidth)
 	if _, err := s.File.ReadAt(size, int64(pos)); err != nil {
 		return nil, err

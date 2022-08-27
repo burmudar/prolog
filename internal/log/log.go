@@ -23,7 +23,7 @@ type Log struct {
 	segments      []*segment
 }
 
-func newLog(dir string, c Config) (*Log, error) {
+func NewLog(dir string, c Config) (*Log, error) {
 	if c.Segment.MaxStoreBytes == 0 {
 		c.Segment.MaxStoreBytes = 1024
 	}
@@ -90,7 +90,7 @@ func (l *Log) newSegment(off uint64) error {
 		l.segments = make([]*segment, 0)
 	}
 
-	l.segments = append(l.segments)
+	l.segments = append(l.segments, s)
 	l.activeSegment = s
 	return nil
 }

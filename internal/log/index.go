@@ -72,6 +72,7 @@ func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 		return 0, 0, io.EOF
 	}
 
+	// Read the size of the position
 	out = enc.Uint32(i.mmap[pos : pos+offWidth])
 	// the position in the store file
 	pos = enc.Uint64(i.mmap[pos+offWidth : pos+entWidth])

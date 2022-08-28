@@ -15,10 +15,10 @@ func TestLog(t *testing.T) {
 		t *testing.T, log *Log,
 	){
 		"append and read a record succeeds": testAppendRead,
-		// "offset out of range error":         testOutofRangeErr,
-		// "init with existing segments":       testInitExisting,
-		// "reader":                            testReader,
-		// "truncate":                          testTruncate,
+		"offset out of range error":         testOutofRangeErr,
+		"init with existing segments":       testInitExisting,
+		"reader":                            testReader,
+		"truncate":                          testTruncate,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			dir, err := ioutil.TempDir("", "log-store-test")

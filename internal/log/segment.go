@@ -94,7 +94,7 @@ func (s *segment) Read(off uint64) (*api.Record, error) {
 
 	var ret api.Record
 	err = proto.Unmarshal(p, &ret)
-	return &ret, nil
+	return &ret, err
 }
 
 func (s *segment) IsMaxed() bool {

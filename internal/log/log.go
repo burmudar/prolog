@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -125,7 +124,7 @@ func (l *Log) Read(off uint64) (*api.Record, error) {
 
 	seg := l.findSegment(off)
 	if seg == nil || seg.nextOffset <= off {
-		return nil, fmt.Errorf("offset out of range: %d", off)
+		return nil, api.ErrOffsetOutOfRange{Offset: off}
 	}
 
 	return seg.Read(off)
@@ -194,7 +193,7 @@ func (l *Log) Truncate(lowest uint64) error {
 	defer l.mu.Unlock()
 	var segments []*segment
 	for _, s := range l.segments {
-		if s.nextOffset <= lowest-1 {
+		if s.nextOffset <= lowest+1 {
 			if err := s.Remove(); err != nil {
 				return err
 			}

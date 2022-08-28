@@ -55,7 +55,9 @@ func testAppendRead(t *testing.T, log *Log) {
 func testOutofRangeErr(t *testing.T, log *Log) {
 	read, err := log.Read(2)
 	require.Nil(t, read)
-	require.NoError(t, err)
+	require.Error(t, err)
+	apiErr := err.(api.ErrOffsetOutOfRange)
+	require.Equal(t, uint64(2), apiErr.Offset)
 }
 
 func testInitExisting(t *testing.T, log *Log) {
@@ -63,7 +65,7 @@ func testInitExisting(t *testing.T, log *Log) {
 		Value: []byte("hello world"),
 	}
 
-	for i := 0; 1 < 3; i++ {
+	for i := 0; i < 3; i++ {
 		_, err := log.Append(append)
 		require.NoError(t, err)
 	}

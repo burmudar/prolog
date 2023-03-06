@@ -1,4 +1,4 @@
-SHELL :=/bin/zsh
+SHELL :=/usr/bin/env zsh
 
 deps:
 	go get google.golang.org/grpc@v1.32.0

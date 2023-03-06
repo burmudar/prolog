@@ -7,20 +7,15 @@ import (
 	"sync"
 )
 
-var (
-	enc = binary.BigEndian
-)
+// enc is the encoding we will use to store record and index entries in
+var enc = binary.BigEndian
 
 const (
-	// defines the number of bytes used to store the record's length
-	// http://golang.org/ref/spec#Size_and_alignment_guarantees
-	//
-	// Entry storage in file:
-	// [record length - 8 bytes][     record      ]
-	// [record length - 8 bytes][     record      ]
-	recordLenWidth = 8
+	// lenWidth defines the number of bytes to store the records length
+	lenWidth = 8
 )
 
+// store is a simple wrapper to append and read bytes to and from a file
 type store struct {
 	*os.File
 	mu   sync.Mutex
@@ -29,86 +24,95 @@ type store struct {
 }
 
 func newStore(f *os.File) (*store, error) {
-	info, err := os.Stat(f.Name())
+	// check if we're restoring from an old file - for example if our service got restarted
+	fi, err := os.Stat(f.Name())
 	if err != nil {
 		return nil, err
 	}
 
+	size := uint64(fi.Size())
+
 	return &store{
 		File: f,
-		mu:   sync.Mutex{},
+		size: size,
 		buf:  bufio.NewWriter(f),
-		size: uint64(info.Size()),
 	}, nil
 }
 
 func (s *store) Append(p []byte) (n uint64, pos uint64, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// we start at the end of the file, thus this is is the starting pos
+	// of our record
 	pos = s.size
-	// Write the length of the record using the binary encoding
+	// first write the length of the p, so that we know how much to read
 	if err := binary.Write(s.buf, enc, uint64(len(p))); err != nil {
 		return 0, 0, err
 	}
 
-	// Write the record data
+	// write the data of p
+	// w = how many bytes were written
 	w, err := s.buf.Write(p)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	// append the size of the length we wrote first using binary.Write
-	w += recordLenWidth
-
-	// update the size so that we know where our next write should start at
+	// add the record width
+	w += lenWidth
+	// add the record width to the size so that we know where to start next,
+	// and not overwrite the previous record
 	s.size += uint64(w)
+
+	// return:
+	//	w = how many bytes were written
+	//	pos = the position of the record
 	return uint64(w), pos, nil
 }
 
 func (s *store) Read(pos uint64) ([]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	// First ensure all records have been written to disk
+	// we flush first to make sure there is nothing still waiting to be written to disk
 	if err := s.buf.Flush(); err != nil {
 		return nil, err
 	}
-
-	// size is the byte array that will keep the size encoded in binary
-	// recordLenWidth = the length of the binary array encoded size
-	size := make([]byte, recordLenWidth)
+	// we read starting at pos, the record length in uint64
+	// we first read the size of the record
+	size := make([]byte, lenWidth)
 	if _, err := s.File.ReadAt(size, int64(pos)); err != nil {
 		return nil, err
 	}
-
-	// encode the binary of the size into it's uint64 representation and create a slice of that size
-	record := make([]byte, enc.Uint64(size))
-	// read into the record slice, adjust the pos with the record length so that we start reading AT the record
-	if _, err := s.File.ReadAt(record, int64(pos+recordLenWidth)); err != nil {
+	// now that we have the record size we can read the record
+	data := make([]byte, enc.Uint64(size))
+	if _, err := s.File.ReadAt(data, int64(pos+lenWidth)); err != nil {
 		return nil, err
 	}
 
-	return record, nil
+	return data, nil
 }
 
-func (s *store) ReadAt(p []byte, off int64) (int, error) {
+// ReadAt satisfies the io.ReadAt interface
+func (s *store) ReadAt(p []byte, n int64) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	if err := s.buf.Flush(); err != nil {
 		return 0, err
 	}
 
-	return s.File.ReadAt(p, off)
+	return s.File.ReadAt(p, n)
 }
 
 func (s *store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.buf.Flush(); err != nil {
+	// make sure before we close the file
+	// that all data has been written to file!
+	err := s.buf.Flush()
+	if err != nil {
 		return err
 	}
 
 	return s.File.Close()
+
 }

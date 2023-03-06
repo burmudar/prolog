@@ -1,5 +1,5 @@
 {
-  description = "Devshell for distributed service with go book"
+  description = "Devshell for distributed service with go book";
 
   inputs = {
     nixpkgs = { url = "github:NixOS/nixpkgs/nixpkgs-unstable"; };
@@ -16,7 +16,9 @@
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             go_1_19
-            protoc
+            protobuf
+            protoc-gen-go
+            protoc-gen-go-grpc
           ];
         };
     });

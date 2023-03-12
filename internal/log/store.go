@@ -92,14 +92,14 @@ func (s *store) Read(pos uint64) ([]byte, error) {
 }
 
 // ReadAt satisfies the io.ReadAt interface
-func (s *store) ReadAt(p []byte, n int64) (int, error) {
+func (s *store) ReadAt(p []byte, offset int64) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.buf.Flush(); err != nil {
 		return 0, err
 	}
 
-	return s.File.ReadAt(p, n)
+	return s.File.ReadAt(p, offset)
 }
 
 func (s *store) Close() error {

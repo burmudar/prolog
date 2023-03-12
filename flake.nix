@@ -16,10 +16,16 @@
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             go_1_19
+            gopls
             protobuf
             protoc-gen-go
             protoc-gen-go-grpc
           ];
         };
+        shellHook = ''
+        if [[ $TERM_PROGRAM != "tmux" ]]; then
+          tmux new -s prolog
+        fi
+        '';
     });
 }

@@ -83,3 +83,48 @@ func TestMultipleStoreAppendRead(t *testing.T) {
 		off += int64(n)
 	}
 }
+
+func TestClose(t *testing.T) {
+	f, err := ioutil.TempFile("", "store_close_test")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+
+	s, err := newStore(f)
+	require.NoError(t, err)
+
+	// we don't care about what we wrote just that something was written
+	// the data isn't flushed yet
+	_, _, err = s.Append(write)
+	require.NoError(t, err)
+
+	_, beforeSize, err := openFile(t, f.Name())
+	require.NoError(t, err)
+
+	// Close flushes the buffer
+	err = s.Close()
+	require.NoError(t, err)
+
+	_, afterSize, err := openFile(t, f.Name())
+	require.NoError(t, err)
+	require.True(t, afterSize > beforeSize)
+
+}
+
+func openFile(t *testing.T, name string) (*os.File, int64, error) {
+	t.Helper()
+
+	f, err := os.OpenFile(name,
+		os.O_RDWR|os.O_CREATE|os.O_APPEND,
+		0644,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return f, info.Size(), nil
+}

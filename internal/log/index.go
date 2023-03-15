@@ -83,7 +83,7 @@ func (idx *index) Close() error {
 }
 
 func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
-	// if out size is zero the index is empty
+	// if our size is zero the index is empty
 	if idx.size == 0 {
 		return 0, 0, io.EOF
 	}
@@ -93,7 +93,8 @@ func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
 	entry := uint64(0)
 	if in == -1 {
 		// amount of entries = size / entry size
-		entry = idx.size/uint64(entryWidth) - 1
+		totalEntries := idx.size / uint64(entryWidth)
+		entry = totalEntries - 1
 	} else if in >= 0 {
 		entry = uint64(in)
 	} else {
@@ -106,18 +107,28 @@ func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
 	// 2  | 24        | 36   | 12
 	// 3  | 36        | 48   | 12
 	pos := entry * entryWidth
+	// we can't read past the end of the file
 	if idx.size < pos+uint64(entryWidth) {
 		return 0, 0, io.EOF
 	}
 	// now that we have the position, decode the binary
 	// Remember! entryWidth consists of 12 bytes
 	// [         12          ]
-	// [idx(4)i32|store(8)i64]
+	// [idx(4)u32|store(8)u64]
 	idxPos = enc.Uint32(idx.mmap[pos : pos+indexPosWidth])
 	storePos = enc.Uint64(idx.mmap[pos+indexPosWidth : pos+entryWidth])
 	return idxPos, storePos, nil
 }
 
 func (idx *index) Write(off, pos uint64) error {
+	// check that adding the entry won't make it larger than our file
+	if uint64(len(idx.mmap)) < pos+entryWidth {
+		return io.EOF
+	}
+
+	enc.PutUint32(idx.mmap[idx.size:idx.size+indexPosWidth], uint32(off))
+	enc.PutUint64(idx.mmap[idx.size+indexPosWidth:idx.size+entryWidth], pos)
+	// we need to increment the size so that we now where the next entry should start
+	idx.size += uint64(entryWidth)
 	return nil
 }

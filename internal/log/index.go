@@ -82,21 +82,23 @@ func (idx *index) Close() error {
 	return idx.file.Close()
 }
 
+// Read takes in an offset and returns the associated position in the store
 func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
 	// if our size is zero the index is empty
 	if idx.size == 0 {
 		return 0, 0, io.EOF
 	}
 
-	// -1 get last entry in the index
-	// > 0 get the entry
-	entry := uint64(0)
+	// off is the record offset
+	// -1 get last off in the index
+	// > 0 get the off
+	off := uint64(0)
 	if in == -1 {
 		// amount of entries = size / entry size
 		totalEntries := idx.size / uint64(entryWidth)
-		entry = totalEntries - 1
+		off = totalEntries - 1
 	} else if in >= 0 {
-		entry = uint64(in)
+		off = uint64(in)
 	} else {
 		return 0, 0, fmt.Errorf("invalid index offset")
 	}
@@ -106,7 +108,8 @@ func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
 	// 1  | 12        | 24   | 12
 	// 2  | 24        | 36   | 12
 	// 3  | 36        | 48   | 12
-	pos := entry * entryWidth
+	// pos is the entry position
+	pos := off * entryWidth
 	// we can't read past the end of the file
 	if idx.size < pos+uint64(entryWidth) {
 		return 0, 0, io.EOF
@@ -120,6 +123,9 @@ func (idx *index) Read(in int64) (idxPos uint32, storePos uint64, err error) {
 	return idxPos, storePos, nil
 }
 
+// Write writes to the index
+// off is the record offset
+// pos is the position in the store file
 func (idx *index) Write(off, pos uint64) error {
 	// check that adding the entry won't make it larger than our file
 	if uint64(len(idx.mmap)) < pos+entryWidth {
@@ -131,4 +137,8 @@ func (idx *index) Write(off, pos uint64) error {
 	// we need to increment the size so that we now where the next entry should start
 	idx.size += uint64(entryWidth)
 	return nil
+}
+
+func (idx *index) Name() string {
+	return idx.file.Name()
 }
